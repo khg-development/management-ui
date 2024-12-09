@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import {
   Form,
@@ -42,7 +43,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import * as z from "zod"
-import { useSearchParams } from "react-router-dom"
+import { useSearchParams, useNavigate } from "react-router-dom"
 
 // Form şeması
 const formSchema = z.object({
@@ -66,6 +67,7 @@ export function ProxyList() {
   const [direction, setDirection] = useState<"asc" | "desc">(
     (searchParams.get("direction") as "asc" | "desc") || "desc"
   )
+  const navigate = useNavigate()
   
   const form = useForm<ProxyFormData>({
     resolver: zodResolver(formSchema),
@@ -239,6 +241,9 @@ export function ProxyList() {
               <DialogTitle>
                 {selectedProxy ? 'Proxy Güncelle' : 'Yeni Proxy Ekle'}
               </DialogTitle>
+              <DialogDescription>
+                Proxy bilgilerini aşağıdaki forma girerek {selectedProxy ? 'güncelleyebilirsiniz' : 'ekleyebilirsiniz'}.
+              </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -331,7 +336,11 @@ export function ProxyList() {
               </TableHeader>
               <TableBody>
                 {proxies.map((proxy) => (
-                  <TableRow key={proxy.id}>
+                  <TableRow 
+                    key={proxy.id}
+                    onDoubleClick={() => navigate(`/routes/${proxy.name}`)}
+                    className="cursor-pointer"
+                  >
                     <TableCell>{proxy.id}</TableCell>
                     <TableCell>{proxy.name}</TableCell>
                     <TableCell>{proxy.uri}</TableCell>
