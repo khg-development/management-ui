@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -60,6 +60,8 @@ export function ProxyList() {
   const [deleteId, setDeleteId] = useState<number | null>(null)
   const [page, setPage] = useState(0)
   const [size] = useState(10)
+  const [sortBy, setSortBy] = useState("createdAt")
+  const [direction, setDirection] = useState<"asc" | "desc">("desc")
   
   const form = useForm<ProxyFormData>({
     resolver: zodResolver(formSchema),
@@ -102,7 +104,7 @@ export function ProxyList() {
       toast({
         variant: "destructive",
         title: "Hata",
-        description: error instanceof Error ? error.message : 'Bir hata oluştu',
+        description: error instanceof Error ? error.message : 'Bir hata olu��tu',
         duration: 3000,
       })
     }
@@ -149,7 +151,7 @@ export function ProxyList() {
 
   const fetchProxies = async (): Promise<PageableResponse<ApiProxyResponse>> => {
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL}/api/v1/proxies?page=${page}&size=${size}&sortBy=createdAt&direction=desc`
+      `${import.meta.env.VITE_API_URL}/api/v1/proxies?page=${page}&size=${size}&sortBy=${sortBy}&direction=${direction}`
     )
     if (!response.ok) {
       throw new Error('Proxy listesi alınamadı')
@@ -157,8 +159,17 @@ export function ProxyList() {
     return response.json()
   }
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setDirection(current => current === "asc" ? "desc" : "asc")
+    } else {
+      setSortBy(column)
+      setDirection("asc")
+    }
+  }
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['proxies', page, size],
+    queryKey: ['proxies', page, size, sortBy, direction],
     queryFn: fetchProxies
   })
 
@@ -275,12 +286,24 @@ export function ProxyList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>İsim</TableHead>
-                  <TableHead>URI</TableHead>
-                  <TableHead>Açıklama</TableHead>
-                  <TableHead>Oluşturulma Tarihi</TableHead>
-                  <TableHead>Güncellenme Tarihi</TableHead>
+                  <TableHead onClick={() => handleSort("id")} className="cursor-pointer hover:bg-muted">
+                    ID <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("name")} className="cursor-pointer hover:bg-muted">
+                    İsim <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("uri")} className="cursor-pointer hover:bg-muted">
+                    URI <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("description")} className="cursor-pointer hover:bg-muted">
+                    Açıklama <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer hover:bg-muted">
+                    Oluşturulma Tarihi <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                  </TableHead>
+                  <TableHead onClick={() => handleSort("updatedAt")} className="cursor-pointer hover:bg-muted">
+                    Güncellenme Tarihi <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                  </TableHead>
                   <TableHead className="w-[100px]">İşlemler</TableHead>
                 </TableRow>
               </TableHeader>
