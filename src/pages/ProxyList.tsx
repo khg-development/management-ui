@@ -104,7 +104,7 @@ export function ProxyList() {
       toast({
         variant: "destructive",
         title: "Hata",
-        description: error instanceof Error ? error.message : 'Bir hata olu��tu',
+        description: error instanceof Error ? error.message : 'Bir hata oluştu.',
         duration: 3000,
       })
     }
