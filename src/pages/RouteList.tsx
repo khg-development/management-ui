@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useParams } from "react-router-dom"
 import {
   Table,
@@ -10,9 +10,13 @@ import {
 } from "@/components/ui/table"
 import { RouteResponse } from "@/types/route"
 import { useState } from "react"
+import { Switch } from "@/components/ui/switch"
+import { useToast } from "@/hooks/use-toast"
 
 export function RouteList() {
   const { proxyName } = useParams()
+  const queryClient = useQueryClient()
+  const { toast } = useToast()
   const [selectedRouteId, setSelectedRouteId] = useState<string>("")
 
   const { data } = useQuery<RouteResponse>({
@@ -25,6 +29,37 @@ export function RouteList() {
   })
 
   const routes = data?.routes ?? []
+
+  const handleStatusChange = async (routeId: string, enabled: boolean) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/routes/${routeId}/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ enabled })
+      })
+
+      if (!response.ok) {
+        throw new Error('Route durumu güncellenemedi')
+      }
+
+      toast({
+        title: "Başarılı",
+        description: `Route ${enabled ? 'aktif' : 'pasif'} duruma getirildi`,
+        duration: 3000,
+      })
+
+      queryClient.invalidateQueries({ queryKey: ['routes', proxyName] })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Hata",
+        description: error instanceof Error ? error.message : 'Bir hata oluştu',
+        duration: 3000,
+      })
+    }
+  }
 
   return (
     <div className="p-4">
@@ -51,7 +86,16 @@ export function RouteList() {
                   <TableCell>{route.method}</TableCell>
                   <TableCell>{route.routeId}</TableCell>
                   <TableCell>
-                    {route.enabled ? 'Aktif' : 'Pasif'}
+                    <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-2">
+                      <Switch
+                        checked={route.enabled}
+                        onCheckedChange={(checked) => handleStatusChange(route.routeId, checked)}
+                        className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-red-500"
+                      />
+                      <span className={route.enabled ? "text-green-600" : "text-red-600"}>
+                        {route.enabled ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
