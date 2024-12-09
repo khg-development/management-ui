@@ -42,6 +42,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import * as z from "zod"
+import { useSearchParams } from "react-router-dom"
 
 // Form şeması
 const formSchema = z.object({
@@ -58,10 +59,13 @@ export function ProxyList() {
   const { toast } = useToast()
   const [selectedProxy, setSelectedProxy] = useState<ApiProxyResponse | null>(null)
   const [deleteId, setDeleteId] = useState<number | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [page, setPage] = useState(0)
   const [size] = useState(10)
-  const [sortBy, setSortBy] = useState("createdAt")
-  const [direction, setDirection] = useState<"asc" | "desc">("desc")
+  const [sortBy, setSortBy] = useState(searchParams.get("sortBy") || "createdAt")
+  const [direction, setDirection] = useState<"asc" | "desc">(
+    (searchParams.get("direction") as "asc" | "desc") || "desc"
+  )
   
   const form = useForm<ProxyFormData>({
     resolver: zodResolver(formSchema),
@@ -161,10 +165,20 @@ export function ProxyList() {
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
-      setDirection(current => current === "asc" ? "desc" : "asc")
+      const newDirection = direction === "asc" ? "desc" : "asc"
+      setDirection(newDirection)
+      setSearchParams(params => {
+        params.set("direction", newDirection)
+        return params
+      })
     } else {
       setSortBy(column)
       setDirection("asc")
+      setSearchParams(params => {
+        params.set("sortBy", column)
+        params.set("direction", "asc")
+        return params
+      })
     }
   }
 
@@ -186,6 +200,14 @@ export function ProxyList() {
       })
     }
   }, [error, toast])
+
+  // Sayfa değiştiğinde URL'i güncelle
+  useEffect(() => {
+    setSearchParams(params => {
+      params.set("page", page.toString())
+      return params
+    })
+  }, [page, setSearchParams])
 
   if (isLoading) {
     return <div className="p-4">Yükleniyor...</div>
@@ -286,24 +308,24 @@ export function ProxyList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead onClick={() => handleSort("id")} className="cursor-pointer hover:bg-muted">
-                    ID <ArrowUpDown className="inline h-4 w-4 ml-1" />
-                  </TableHead>
-                  <TableHead onClick={() => handleSort("name")} className="cursor-pointer hover:bg-muted">
-                    İsim <ArrowUpDown className="inline h-4 w-4 ml-1" />
-                  </TableHead>
-                  <TableHead onClick={() => handleSort("uri")} className="cursor-pointer hover:bg-muted">
-                    URI <ArrowUpDown className="inline h-4 w-4 ml-1" />
-                  </TableHead>
-                  <TableHead onClick={() => handleSort("description")} className="cursor-pointer hover:bg-muted">
-                    Açıklama <ArrowUpDown className="inline h-4 w-4 ml-1" />
-                  </TableHead>
-                  <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer hover:bg-muted">
-                    Oluşturulma Tarihi <ArrowUpDown className="inline h-4 w-4 ml-1" />
-                  </TableHead>
-                  <TableHead onClick={() => handleSort("updatedAt")} className="cursor-pointer hover:bg-muted">
-                    Güncellenme Tarihi <ArrowUpDown className="inline h-4 w-4 ml-1" />
-                  </TableHead>
+                  {[
+                    { key: "id", label: "ID" },
+                    { key: "name", label: "İsim" },
+                    { key: "uri", label: "URI" },
+                    { key: "description", label: "Açıklama" },
+                    { key: "createdAt", label: "Oluşturulma Tarihi" },
+                    { key: "updatedAt", label: "Güncellenme Tarihi" }
+                  ].map(({ key, label }) => (
+                    <TableHead 
+                      key={key}
+                      onClick={() => handleSort(key)} 
+                      className={`cursor-pointer hover:bg-muted ${
+                        sortBy === key ? 'font-bold' : ''
+                      }`}
+                    >
+                      {label} <ArrowUpDown className="inline h-4 w-4 ml-1" />
+                    </TableHead>
+                  ))}
                   <TableHead className="w-[100px]">İşlemler</TableHead>
                 </TableRow>
               </TableHeader>
