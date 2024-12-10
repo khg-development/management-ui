@@ -2,7 +2,8 @@ export interface Route {
   routeId: string;
   enabled: boolean;
   path: string;
-  method: string;
+  method: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "TRACE";
+  headers: RouteHeader[];
 }
 
 export interface RouteResponse {

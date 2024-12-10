@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, X } from "lucide-react"
+import { Plus, X, Pencil } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { RouteResponse, RouteHeader } from "@/types/route"
+import { RouteResponse, RouteHeader, Route } from "@/types/route"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -126,10 +126,22 @@ export function RouteList() {
     }
   }
 
+  const handleEdit = (route: Route) => {
+    setSelectedRouteId(route.routeId)
+    form.reset({
+      routeId: route.routeId,
+      path: route.path,
+      method: route.method,
+      headers: route.headers
+    })
+    setHeaders(route.headers)
+    setOpen(true)
+  }
+
   const onSubmit = async (data: RouteFormData) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/routes/${proxyName}`, {
-        method: 'POST',
+        method: selectedRouteId ? 'PUT' : 'POST', // Eğer selectedRouteId varsa güncelleme
         headers: {
           'Content-Type': 'application/json',
         },
@@ -137,17 +149,19 @@ export function RouteList() {
       })
 
       if (!response.ok) {
-        throw new Error('Route eklenemedi')
+        throw new Error(selectedRouteId ? 'Route güncellenemedi' : 'Route eklenemedi')
       }
 
       toast({
         title: "Başarılı",
-        description: "Route başarıyla eklendi",
+        description: selectedRouteId ? "Route başarıyla güncellendi" : "Route başarıyla eklendi",
         duration: 3000,
       })
       
       setOpen(false)
+      setSelectedRouteId("")
       form.reset()
+      setHeaders([])
       queryClient.invalidateQueries({ queryKey: ['routes', proxyName] })
     } catch (error) {
       toast({
@@ -191,7 +205,9 @@ export function RouteList() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Yeni Route Ekle</DialogTitle>
+              <DialogTitle>
+                {selectedRouteId ? 'Route Güncelle' : 'Yeni Route Ekle'}
+              </DialogTitle>
               <DialogDescription>
                 Route bilgilerini aşağıdaki forma girerek ekleyebilirsiniz.
               </DialogDescription>
@@ -312,7 +328,7 @@ export function RouteList() {
                     İptal
                   </Button>
                   <Button type="submit" className="w-full">
-                    Ekle
+                    {selectedRouteId ? 'Güncelle' : 'Ekle'}
                   </Button>
                 </div>
               </form>
@@ -329,6 +345,7 @@ export function RouteList() {
                 <TableHead>Method</TableHead>
                 <TableHead>Route ID</TableHead>
                 <TableHead>Durum</TableHead>
+                <TableHead>İşlemler</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -351,6 +368,17 @@ export function RouteList() {
                       <span className={route.enabled ? "text-green-600" : "text-red-600"}>
                         {route.enabled ? 'Aktif' : 'Pasif'}
                       </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(route)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
