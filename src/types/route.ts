@@ -4,6 +4,8 @@ export interface Route {
   path: string;
   method: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS" | "TRACE";
   headers: RouteHeader[];
+  activationTime?: string;
+  expirationTime?: string;
 }
 
 export interface RouteResponse {
@@ -21,4 +23,6 @@ export interface RouteFormData {
   path: string;
   method: string;
   headers: RouteHeader[];
+  activationTime?: string;
+  expirationTime?: string;
 } 

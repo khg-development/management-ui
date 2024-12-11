@@ -54,12 +54,49 @@ const formSchema = z.object({
     key: z.string(),
     value: z.string(),
     type: z.enum(['ADD_REQUEST_HEADER', 'ADD_REQUEST_HEADER_IF_NOT_PRESENT'])
-  }))
+  })),
+  activationTime: z.string().optional(),
+  expirationTime: z.string().optional()
 })
 
 type RouteFormData = z.infer<typeof formSchema>
 
 const METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE"] as const
+
+const isoToLocalDateTime = (isoString: string | undefined) => {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const localDate = new Date(date.getTime() - (date.getTimezoneOffset() * 60000));
+  return localDate.toISOString().slice(0, 16);
+};
+
+const localToUTCDateTime = (localDateStr: string) => {
+  if (!localDateStr) return '';
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return new Date(localDateStr).toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZone: userTimezone
+  }).replace(/(\d+)\/(\d+)\/(\d+),\s+/, '$3-$1-$2T') + getTimezoneOffset(userTimezone);
+};
+
+const getTimezoneOffset = (timezone: string) => {
+  const date = new Date();
+  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+  const offset = (tzDate.getTime() - utcDate.getTime()) / 60000;
+  
+  const hours = Math.floor(Math.abs(offset) / 60);
+  const minutes = Math.abs(offset) % 60;
+  const sign = offset >= 0 ? '+' : '-';
+  
+  return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
 
 export function RouteList() {
   const { proxyName } = useParams()
@@ -115,7 +152,7 @@ export function RouteList() {
         duration: 3000,
       })
 
-      queryClient.invalidateQueries({ queryKey: ['routes', proxyName] })
+      await queryClient.invalidateQueries({queryKey: ['routes', proxyName]})
     } catch (error) {
       toast({
         variant: "destructive",
@@ -132,7 +169,9 @@ export function RouteList() {
       routeId: route.routeId,
       path: route.path,
       method: route.method,
-      headers: route.headers
+      headers: route.headers,
+      activationTime: route.activationTime ? isoToLocalDateTime(route.activationTime) : undefined,
+      expirationTime: route.expirationTime ? isoToLocalDateTime(route.expirationTime) : undefined
     })
     setHeaders(route.headers)
     setOpen(true)
@@ -141,11 +180,18 @@ export function RouteList() {
   const onSubmit = async (data: RouteFormData) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/routes/${proxyName}`, {
-        method: selectedRouteId ? 'PUT' : 'POST', // Eğer selectedRouteId varsa güncelleme
+        method: selectedRouteId ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          routeId: data.routeId,
+          path: data.path,
+          method: data.method,
+          headers: data.headers,
+          activationTime: data.activationTime || undefined,
+          expirationTime: data.expirationTime || undefined
+        })
       })
 
       if (!response.ok) {
@@ -276,6 +322,49 @@ export function RouteList() {
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="activationTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Aktivasyon Zamanı</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="datetime-local" 
+                            {...field} 
+                            value={field.value ? isoToLocalDateTime(field.value) : ''}
+                            onChange={(e) => {
+                              field.onChange(localToUTCDateTime(e.target.value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="expirationTime"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Bitiş Zamanı</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="datetime-local" 
+                            {...field}
+                            value={field.value ? isoToLocalDateTime(field.value) : ''}
+                            onChange={(e) => {
+                              field.onChange(localToUTCDateTime(e.target.value));
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <div className="space-y-4">
                   <div className="font-medium">Request Headers</div>
                   
@@ -357,7 +446,6 @@ export function RouteList() {
                 <TableHead>Method</TableHead>
                 <TableHead>Route ID</TableHead>
                 <TableHead>Durum</TableHead>
-                <TableHead>İşlemler</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
