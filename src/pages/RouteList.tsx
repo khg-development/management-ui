@@ -133,6 +133,7 @@ export function RouteList() {
   })
   const [activationTime, setActivationTime] = useState<string | undefined>()
   const [expirationTime, setExpirationTime] = useState<string | undefined>()
+  const [isCookiesOpen, setIsCookiesOpen] = useState(false)
 
   const form = useForm<RouteFormData>({
     resolver: zodResolver(formSchema),
@@ -706,6 +707,46 @@ export function RouteList() {
                           ))}
                           {routes.find(r => r.routeId === selectedRouteId)?.headers.length === 0 && (
                             <p className="text-muted-foreground">Header bulunmamaktadır.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border rounded-md">
+                    <button
+                      type="button"
+                      onClick={() => setIsCookiesOpen(!isCookiesOpen)}
+                      className="flex items-center justify-between w-full p-4 text-left"
+                    >
+                      <span className="text-lg font-medium">Cookie Kontrolü</span>
+                      {isCookiesOpen ? (
+                        <ChevronUp className="h-5 w-5" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" />
+                      )}
+                    </button>
+                    
+                    {isCookiesOpen && (
+                      <div className="p-4 border-t">
+                        <div className="space-y-2">
+                          {routes.find(r => r.routeId === selectedRouteId)?.cookies?.map((cookie, index) => (
+                            <div key={index} className="p-2 border rounded-md">
+                              <div className="flex items-center gap-4">
+                                <div className="flex-1">
+                                  <span className="font-medium">Cookie Adı: </span>
+                                  {cookie.name}
+                                </div>
+                                <div className="flex-1 text-center">
+                                  <span className="font-medium">Cookie Değeri: </span>
+                                  {cookie.regexp}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {(!routes.find(r => r.routeId === selectedRouteId)?.cookies || 
+                            routes.find(r => r.routeId === selectedRouteId)?.cookies?.length === 0) && (
+                            <p className="text-muted-foreground">Cookie kontrolü bulunmamaktadır.</p>
                           )}
                         </div>
                       </div>
