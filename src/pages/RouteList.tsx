@@ -38,12 +38,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { RouteResponse, RouteHeader, Route } from "@/types/route"
+import { RouteResponse, RouteHeader, Route, RouteCookie } from "@/types/route"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 
-// Form şeması
 const formSchema = z.object({
   routeId: z.string().min(1, "Route ID boş olamaz"),
   path: z.string().min(1, "Path boş olamaz"),
@@ -56,7 +55,11 @@ const formSchema = z.object({
     type: z.enum(['ADD_REQUEST_HEADER', 'ADD_REQUEST_HEADER_IF_NOT_PRESENT'])
   })),
   activationTime: z.string().optional(),
-  expirationTime: z.string().optional()
+  expirationTime: z.string().optional(),
+  cookies: z.array(z.object({
+    name: z.string(),
+    regexp: z.string()
+  })).optional()
 })
 
 type RouteFormData = z.infer<typeof formSchema>
@@ -123,6 +126,11 @@ export function RouteList() {
   })
   const [isTimeSettingsOpen, setIsTimeSettingsOpen] = useState(false)
   const [isHeadersOpen, setIsHeadersOpen] = useState(false)
+  const [cookies, setCookies] = useState<RouteCookie[]>([])
+  const [newCookie, setNewCookie] = useState({
+    name: '',
+    regexp: ''
+  })
 
   const form = useForm<RouteFormData>({
     resolver: zodResolver(formSchema),
@@ -130,7 +138,10 @@ export function RouteList() {
       routeId: "",
       path: "",
       method: "GET",
-      headers: []
+      headers: [],
+      activationTime: undefined,
+      expirationTime: undefined,
+      cookies: []
     }
   })
 
@@ -184,8 +195,10 @@ export function RouteList() {
       method: route.method,
       headers: route.headers,
       activationTime: route.activationTime ? isoToLocalDateTime(route.activationTime) : undefined,
-      expirationTime: route.expirationTime ? isoToLocalDateTime(route.expirationTime) : undefined
+      expirationTime: route.expirationTime ? isoToLocalDateTime(route.expirationTime) : undefined,
+      cookies: route.cookies
     })
+    setCookies(route.cookies || [])
     setHeaders(route.headers)
     setOpen(true)
   }
@@ -203,7 +216,8 @@ export function RouteList() {
           method: data.method,
           headers: data.headers,
           activationTime: data.activationTime || undefined,
-          expirationTime: data.expirationTime || undefined
+          expirationTime: data.expirationTime || undefined,
+          cookies: data.cookies || undefined
         })
       })
 
@@ -251,6 +265,24 @@ export function RouteList() {
     form.setValue('headers', newHeaders)
   }
 
+  const addCookie = () => {
+    if (newCookie.name && newCookie.regexp) {
+      const cookie: RouteCookie = {
+        name: newCookie.name,
+        regexp: newCookie.regexp
+      }
+      setCookies([...cookies, cookie])
+      form.setValue('cookies', [...cookies, cookie])
+      setNewCookie({ name: '', regexp: '' })
+    }
+  }
+
+  const removeCookie = (index: number) => {
+    const newCookies = cookies.filter((_, i) => i !== index)
+    setCookies(newCookies)
+    form.setValue('cookies', newCookies)
+  }
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
@@ -259,11 +291,17 @@ export function RouteList() {
           if (!open) {
             setSelectedRouteId("")
             setHeaders([])
+            setCookies([])
+            setNewHeader({ key: '', value: '', ifNotPresent: false })
+            setNewCookie({ name: '', regexp: '' })
             form.reset({
               routeId: "",
               path: "",
               method: "GET",
-              headers: []
+              headers: [],
+              activationTime: undefined,
+              expirationTime: undefined,
+              cookies: []
             })
           }
           setOpen(open)
@@ -274,7 +312,7 @@ export function RouteList() {
               Yeni Route Ekle
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[75vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {selectedRouteId ? 'Route Güncelle' : 'Yeni Route Ekle'}
@@ -434,10 +472,74 @@ export function RouteList() {
                     </Button>
                   </div>
                 </div>
+                <div className="space-y-4">
+                  <div className="font-medium">Cookie Kontrolü</div>
+                  
+                  <div className="space-y-2">
+                    {cookies.map((cookie, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
+                        <div className="flex-1">
+                          <span className="font-medium">Name: </span>
+                          {cookie.name}
+                        </div>
+                        <div className="flex-1">
+                          <span className="font-medium">Regex: </span>
+                          {cookie.regexp}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeCookie(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Cookie Name"
+                        value={newCookie.name}
+                        onChange={(e) => setNewCookie({ ...newCookie, name: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        placeholder="Cookie Regex"
+                        value={newCookie.regexp}
+                        onChange={(e) => setNewCookie({ ...newCookie, regexp: e.target.value })}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addCookie}
+                      disabled={!newCookie.name || !newCookie.regexp}
+                    >
+                      Ekle
+                    </Button>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" type="button" onClick={() => {
                     setOpen(false)
-                    form.reset()
+                    setSelectedRouteId("")
+                    setHeaders([])
+                    setCookies([])
+                    setNewHeader({ key: '', value: '', ifNotPresent: false })
+                    setNewCookie({ name: '', regexp: '' })
+                    form.reset({
+                      routeId: "",
+                      path: "",
+                      method: "GET",
+                      headers: [],
+                      activationTime: undefined,
+                      expirationTime: undefined,
+                      cookies: []
+                    })
                   }} className="w-full">
                     İptal
                   </Button>

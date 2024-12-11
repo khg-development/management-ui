@@ -1,3 +1,8 @@
+export interface RouteCookie {
+  name: string;
+  regexp: string;
+}
+
 export interface Route {
   routeId: string;
   enabled: boolean;
@@ -6,6 +11,7 @@ export interface Route {
   headers: RouteHeader[];
   activationTime?: string;
   expirationTime?: string;
+  cookies?: RouteCookie[];
 }
 
 export interface RouteResponse {
@@ -25,4 +31,5 @@ export interface RouteFormData {
   headers: RouteHeader[];
   activationTime?: string;
   expirationTime?: string;
+  cookies?: RouteCookie[];
 } 
