@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Plus, X, Pencil } from "lucide-react"
+import { Plus, X, Pencil, ChevronDown, ChevronUp } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -98,6 +98,17 @@ const getTimezoneOffset = (timezone: string) => {
   return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+const methodColors: Record<string, string> = {
+  GET: "bg-blue-100 text-blue-800",
+  POST: "bg-green-100 text-green-800",
+  PUT: "bg-yellow-100 text-yellow-800",
+  DELETE: "bg-red-100 text-red-800",
+  HEAD: "bg-purple-100 text-purple-800",
+  PATCH: "bg-orange-100 text-orange-800",
+  OPTIONS: "bg-gray-100 text-gray-800",
+  TRACE: "bg-indigo-100 text-indigo-800"
+}
+
 export function RouteList() {
   const { proxyName } = useParams()
   const queryClient = useQueryClient()
@@ -110,6 +121,8 @@ export function RouteList() {
     value: '',
     ifNotPresent: false
   })
+  const [isTimeSettingsOpen, setIsTimeSettingsOpen] = useState(false)
+  const [isHeadersOpen, setIsHeadersOpen] = useState(false)
 
   const form = useForm<RouteFormData>({
     resolver: zodResolver(formSchema),
@@ -487,9 +500,108 @@ export function RouteList() {
           </Table>
         </div>
         <div className="rounded-lg border p-4">
-          <h2 className="text-lg font-semibold mb-4">Seçili Route</h2>
+          <h2 className="text-2xl font-semibold mb-4">Route Bilgisi</h2>
           {selectedRouteId ? (
-            <div className="text-lg">{selectedRouteId}</div>
+            <div className="space-y-6">
+              {routes.find(r => r.routeId === selectedRouteId) && (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className={`px-2 py-1 rounded text-sm font-medium ${
+                        methodColors[routes.find(r => r.routeId === selectedRouteId)?.method || 'GET']
+                      }`}>
+                        {routes.find(r => r.routeId === selectedRouteId)?.method}
+                      </span>
+                      <span className="text-xl font-medium">
+                        {routes.find(r => r.routeId === selectedRouteId)?.path}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-md">
+                    <button
+                      type="button"
+                      onClick={() => setIsTimeSettingsOpen(!isTimeSettingsOpen)}
+                      className="flex items-center justify-between w-full p-4 text-left"
+                    >
+                      <span className="text-lg font-medium">Aktivasyon Zaman Ayarı</span>
+                      {isTimeSettingsOpen ? (
+                        <ChevronUp className="h-5 w-5" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" />
+                      )}
+                    </button>
+                    
+                    {isTimeSettingsOpen && (
+                      <div className="p-4 border-t">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Aktivasyon Zamanı
+                            </label>
+                            <Input 
+                              type="datetime-local"
+                              value={isoToLocalDateTime(routes.find(r => r.routeId === selectedRouteId)?.activationTime)}
+                              readOnly
+                              className="bg-muted"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                              Bitiş Zamanı
+                            </label>
+                            <Input 
+                              type="datetime-local"
+                              value={isoToLocalDateTime(routes.find(r => r.routeId === selectedRouteId)?.expirationTime)}
+                              readOnly
+                              className="bg-muted"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border rounded-md">
+                    <button
+                      type="button"
+                      onClick={() => setIsHeadersOpen(!isHeadersOpen)}
+                      className="flex items-center justify-between w-full p-4 text-left"
+                    >
+                      <span className="text-lg font-medium">Request Headers</span>
+                      {isHeadersOpen ? (
+                        <ChevronUp className="h-5 w-5" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5" />
+                      )}
+                    </button>
+                    
+                    {isHeadersOpen && (
+                      <div className="p-4 border-t">
+                        <div className="space-y-2">
+                          {routes.find(r => r.routeId === selectedRouteId)?.headers.map((header, index) => (
+                            <div key={index} className="p-2 border rounded-md">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-medium">{header.key}: </span>
+                                  {header.value}
+                                </div>
+                                <span className="text-sm text-muted-foreground">
+                                  {header.type === 'ADD_REQUEST_HEADER_IF_NOT_PRESENT' ? 'Eğer yoksa ekle' : 'Her zaman ekle'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                          {routes.find(r => r.routeId === selectedRouteId)?.headers.length === 0 && (
+                            <p className="text-muted-foreground">Header bulunmamaktadır.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           ) : (
             <div className="text-muted-foreground">Lütfen bir route seçin</div>
           )}
