@@ -131,6 +131,8 @@ export function RouteList() {
     name: '',
     regexp: ''
   })
+  const [activationTime, setActivationTime] = useState<string | undefined>()
+  const [expirationTime, setExpirationTime] = useState<string | undefined>()
 
   const form = useForm<RouteFormData>({
     resolver: zodResolver(formSchema),
@@ -189,13 +191,15 @@ export function RouteList() {
 
   const handleEdit = (route: Route) => {
     setSelectedRouteId(route.routeId)
+    setActivationTime(route.activationTime ? isoToLocalDateTime(route.activationTime) : undefined)
+    setExpirationTime(route.expirationTime ? isoToLocalDateTime(route.expirationTime) : undefined)
     form.reset({
       routeId: route.routeId,
       path: route.path,
       method: route.method,
       headers: route.headers,
-      activationTime: route.activationTime ? isoToLocalDateTime(route.activationTime) : undefined,
-      expirationTime: route.expirationTime ? isoToLocalDateTime(route.expirationTime) : undefined,
+      activationTime: route.activationTime,
+      expirationTime: route.expirationTime,
       cookies: route.cookies
     })
     setCookies(route.cookies || [])
@@ -294,6 +298,8 @@ export function RouteList() {
             setCookies([])
             setNewHeader({ key: '', value: '', ifNotPresent: false })
             setNewCookie({ name: '', regexp: '' })
+            setActivationTime(undefined)
+            setExpirationTime(undefined)
             form.reset({
               routeId: "",
               path: "",
@@ -383,10 +389,11 @@ export function RouteList() {
                         <FormControl>
                           <Input 
                             type="datetime-local" 
-                            {...field} 
-                            value={field.value ? isoToLocalDateTime(field.value) : ''}
+                            value={activationTime || ''}
                             onChange={(e) => {
-                              field.onChange(localToUTCDateTime(e.target.value));
+                              const value = e.target.value
+                              setActivationTime(value)
+                              field.onChange(value ? localToUTCDateTime(value) : undefined)
                             }}
                           />
                         </FormControl>
@@ -404,10 +411,11 @@ export function RouteList() {
                         <FormControl>
                           <Input 
                             type="datetime-local" 
-                            {...field}
-                            value={field.value ? isoToLocalDateTime(field.value) : ''}
+                            value={expirationTime || ''}
                             onChange={(e) => {
-                              field.onChange(localToUTCDateTime(e.target.value));
+                              const value = e.target.value
+                              setExpirationTime(value)
+                              field.onChange(value ? localToUTCDateTime(value) : undefined)
                             }}
                           />
                         </FormControl>
@@ -531,6 +539,8 @@ export function RouteList() {
                     setCookies([])
                     setNewHeader({ key: '', value: '', ifNotPresent: false })
                     setNewCookie({ name: '', regexp: '' })
+                    setActivationTime(undefined)
+                    setExpirationTime(undefined)
                     form.reset({
                       routeId: "",
                       path: "",
